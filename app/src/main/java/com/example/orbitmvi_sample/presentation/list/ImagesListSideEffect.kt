@@ -1,4 +1,4 @@
-package com.example.orbitmvi_sample.presentation
+package com.example.orbitmvi_sample.presentation.list
 
 sealed class ImagesListSideEffect {
     data class ShowToast(val message: String) : ImagesListSideEffect()
