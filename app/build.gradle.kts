@@ -91,6 +91,7 @@ dependencies {
 
     //koin
     implementation(libs.koin.core)
+    implementation(libs.koin.android)
 
     //lottie
     implementation(libs.lottie)
@@ -100,6 +101,9 @@ dependencies {
     implementation(libs.orbit.core)
     implementation(libs.orbit.viewmodel)
     implementation(libs.orbit.compose)
+
+    //Coil
+    implementation(libs.coil.compose)
 
 
 }
