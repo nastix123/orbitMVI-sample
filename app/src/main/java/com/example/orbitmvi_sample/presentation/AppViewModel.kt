@@ -5,6 +5,7 @@ import com.example.orbitmvi_sample.domain.repo.ApiRepository
 import com.example.orbitmvi_sample.presentation.list.ImagesListSideEffect
 import com.example.orbitmvi_sample.presentation.list.ImagesListState
 import kotlinx.coroutines.CoroutineScope
+import org.orbitmvi.orbit.Container
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.container
 
@@ -15,7 +16,10 @@ class AppViewModel(
     override val container =
         scope.container<ImagesListState, ImagesListSideEffect>(ImagesListState())
 
-    fun getPhotos() = intent {
+    init {
+        getPhotos()
+    }
+    private fun getPhotos() = intent {
         repeatOnSubscription {
             try {
                 postSideEffect(ImagesListSideEffect.ShowProgressBar)
