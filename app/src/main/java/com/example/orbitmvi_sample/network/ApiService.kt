@@ -9,17 +9,16 @@ import retrofit2.http.Path
 
 interface ApiService {
 
-    @Headers(Const.API_KEY)
-    @GET(Const.BASE_URL + "/search")
+    @GET("curated")
     suspend fun getPhotos(): Response<PhotosResponse>
 
-    @Headers(Const.API_KEY)
-    @GET("/photos/{photoId}")
+    @GET("photos/{photoId}")
     suspend fun getPhoto(@Path("photoId") photoId: Int): Response<PhotoDto>
 
 }
 
 object Const {
     const val API_KEY = "fSIEuzHEyEAdGmmoxdLLaMJvz3yY9l6hLpeAkCKiV1dE1XrFw7aqm2SD"
-    const val BASE_URL = "https://api.pexels.com/v1"
+    const val BASE_URL = "https://api.pexels.com/v1/"
+    const val AUTH = "Authorization"
 }
