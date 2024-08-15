@@ -8,5 +8,14 @@ data class PhotoDto(
     @SerializedName("url")
     val photoUrl: String,
     @SerializedName("photographer")
-    val photographer: String
+    val photographer: String,
+    @SerializedName("src")
+    val src: QualityDto
+)
+
+data class QualityDto(
+    @SerializedName("original")
+    val original: String,
+    @SerializedName("medium")
+    val medium: String,
 )
