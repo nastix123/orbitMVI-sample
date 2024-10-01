@@ -1,12 +1,12 @@
 package com.example.orbitmvi_sample.di
 
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.orbitmvi_sample.data.repo.ApiRepositoryImpl
 import com.example.orbitmvi_sample.domain.repo.ApiRepository
 import com.example.orbitmvi_sample.network.ApiKeyInterceptor
 import com.example.orbitmvi_sample.network.ApiService
 import com.example.orbitmvi_sample.network.Const
 import com.example.orbitmvi_sample.presentation.AppViewModel
+import com.example.orbitmvi_sample.presentation.details.PhotoDetailViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
@@ -53,7 +53,9 @@ val appModule = module {
     single { provideRetrofit(get(), get()) }
     single { provideService(get()) }
 
+
     single<ApiRepository> { ApiRepositoryImpl(apiService = get()) }
-    viewModel { AppViewModel(scope = get(), repo = get()) }
+    viewModel { AppViewModel() }
+    viewModel { PhotoDetailViewModel() }
     single { CoroutineScope(Dispatchers.IO) }
 }

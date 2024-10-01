@@ -1,66 +1,71 @@
 package com.example.orbitmvi_sample.presentation.list
 
+import android.util.Log
+import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CardElevation
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.orbitmvi_sample.domain.model.Photo
+import coil.request.ImageRequest
+import com.example.orbitmvi_sample.domain.model.Image
 import com.example.orbitmvi_sample.presentation.AppViewModel
+import com.example.orbitmvi_sample.presentation.ImagesListSideEffect
+import com.example.orbitmvi_sample.presentation.MainScreenAction
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
+import kotlin.random.Random
 
 @Composable
 fun ImagesScreen(
-    viewModel: AppViewModel
+    viewModel: AppViewModel,
+    navController: NavController
 ) {
-    val state by viewModel.container.stateFlow.collectAsState()
+    val state by viewModel.collectAsState()
+    val context = LocalContext.current
+
     Box(modifier = Modifier.fillMaxSize()) {
         when {
             state.isLoading -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
+
             state.error != null -> {
-                Text(
-                    text = state.error!!,
-                    color = Color.Red,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(16.dp)
-                )
+                Text(text = "${state.error}", modifier = Modifier.align(Alignment.Center))
             }
+
             state.images.isNotEmpty() -> {
                 ImagesList(
                     images = state.images,
                     onItemClick = { photo ->
-                        // TODO: Обработка клика на изображение
+                        viewModel.dispatch(MainScreenAction.SelectPhoto(photo))
                     }
                 )
             }
+
             else -> {
                 Text(
                     text = "Нет доступных изображений",
@@ -69,38 +74,44 @@ fun ImagesScreen(
             }
         }
     }
-    viewModel.collectSideEffect {
-        when (it) {
+
+    viewModel.collectSideEffect { sideEffect ->
+        when (sideEffect) {
             is ImagesListSideEffect.ShowToast -> {
-                // TODO: show toast
+                Toast.makeText(
+                    context,
+                    sideEffect.message,
+                    Toast.LENGTH_SHORT
+                ).show()
             }
-            is ImagesListSideEffect.ShowProgressBar -> {
-                // TODO: show progress bar
+
+            is ImagesListSideEffect.NavigateToPhotoDetail -> {
+                navController.navigate("photo_detail_screen_route/${sideEffect.image.id}")
             }
-            is ImagesListSideEffect.HideProgressBar -> {
-                // TODO: hide progress bar
-            }
-            is ImagesListSideEffect.NavigateToErrorScreen -> {
-                // TODO: navigate to error screen
-            }
+
         }
     }
 }
 
+
 @Composable
 fun ImagesList(
-    images: List<Photo>,
-    onItemClick: (Photo) -> Unit
+    images: List<Image>,
+    onItemClick: (Image) -> Unit
 ) {
-    LazyColumn(
-        contentPadding = PaddingValues(8.dp)
+    LazyVerticalStaggeredGrid(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 8.dp)
+            .padding(top = 16.dp, bottom = 8.dp),
+        columns = StaggeredGridCells.Fixed(2),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+        verticalItemSpacing = 8.dp
     ) {
         items(images) { image ->
             ImageItem(
-                photoData = image,
-                modifier = Modifier
-                    .padding(8.dp)
-                    .clickable { onItemClick(image) }
+                image = image,
+                onClick = onItemClick,
             )
         }
     }
@@ -109,34 +120,57 @@ fun ImagesList(
 @Composable
 fun ImageItem(
     modifier: Modifier = Modifier,
-    photoData: Photo,
+    image: Image,
+    onClick: (Image) -> Unit,
 ) {
+    val randomHeight = Random.nextInt(150, 300).dp
+
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable { onClick.invoke(image) },
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(4.dp),
-
     ) {
         Column {
-
             AsyncImage(
-                model = photoData.photoUrl,
-                contentDescription = photoData.photographer,
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(image.url)
+                    .crossfade(true)
+                    .listener(
+                        onStart = {  },
+                        onSuccess = { _, _ ->  },
+                        onError = { _, throwable ->
+                            Log.e(
+                                "ImageLoad",
+                                "Error loading image: ${throwable.throwable.message}"
+                            )
+                        }
+                    )
+                    .build(),
+                contentDescription = image.photographer,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
+                    .height(randomHeight)
                     .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
                 contentScale = ContentScale.Crop
             )
 
-            Text(
-                text = photoData.photographer ?: "Без описания",
+            Box(
                 modifier = Modifier
-                    .padding(8.dp)
-                    .fillMaxWidth(),
-                fontSize = 22.sp
-            )
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.5f))
+            ) {
+                Text(
+                    text = image.photographer,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .align(Alignment.CenterStart),
+                    fontSize = 16.sp,
+                    color = Color.White
+                )
+            }
         }
     }
 }
+
+
 

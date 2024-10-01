@@ -4,20 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.orbitmvi_sample.di.appModule
+import androidx.navigation.compose.rememberNavController
+import com.example.orbitmvi_sample.navigation.NavigationGraph
 import com.example.orbitmvi_sample.presentation.AppViewModel
+import com.example.orbitmvi_sample.presentation.details.PhotoDetailViewModel
 import com.example.orbitmvi_sample.presentation.list.ImagesScreen
 import com.example.orbitmvi_sample.ui.theme.OrbitMVIsampleTheme
-import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.ext.android.viewModel
-import org.koin.core.context.GlobalContext.startKoin
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,9 +18,11 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
+            val navController = rememberNavController()
             OrbitMVIsampleTheme {
                 val viewModel: AppViewModel by viewModel()
-                ImagesScreen(viewModel = viewModel)
+                val viewModelDetail: PhotoDetailViewModel by viewModel()
+               NavigationGraph(navController = navController, viewModel = viewModel, viewModelDetail = viewModelDetail)
             }
         }
     }
