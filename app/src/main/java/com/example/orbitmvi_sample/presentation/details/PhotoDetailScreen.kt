@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -87,6 +88,10 @@ fun PhotoDetails(
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        Button(onClick = { navController.popBackStack() }) {
+            Text(text = "Назад")
+        }
+        Spacer(Modifier.height(10.dp))
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(image.url)
@@ -110,9 +115,7 @@ fun PhotoDetails(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(onClick = { navController.popBackStack() }) {
-            Text(text = "Назад")
-        }
+
     }
 }
 

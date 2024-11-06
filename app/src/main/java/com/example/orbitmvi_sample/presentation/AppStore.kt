@@ -7,16 +7,20 @@ import com.example.orbitmvi_sample.domain.repo.ApiRepository
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import org.koin.java.KoinJavaComponent.inject
 import org.orbitmvi.orbit.ContainerHost
+import org.orbitmvi.orbit.annotation.OrbitExperimental
 import org.orbitmvi.orbit.container
 
-sealed interface MainScreenAction {
-    data object LoadPhotos : MainScreenAction
-    data object Refresh : MainScreenAction
-    data class SelectPhoto(val image: Image) : MainScreenAction
+sealed class MainScreenAction {
+    data object LoadPhotos : MainScreenAction()
+    data class DeletePhoto(val image: Image) : MainScreenAction()
+    data class SelectPhoto(val image: Image) : MainScreenAction()
 }
 
 sealed class ImagesListSideEffect {
@@ -29,7 +33,6 @@ data class ImagesListState(
     val selectedImage: Image? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isRefreshing: Boolean? = false
 )
 
 
@@ -55,16 +58,27 @@ class AppViewModel() : ContainerHost<ImagesListState, ImagesListSideEffect>, Vie
     fun dispatch(action: MainScreenAction) {
         when (action) {
             is MainScreenAction.LoadPhotos -> loadPhotos()
-            is MainScreenAction.Refresh -> loadPhotos()
+            is MainScreenAction.DeletePhoto -> deletePhoto(action.image)
             is MainScreenAction.SelectPhoto -> handleSelectPhoto(action.image)
         }
     }
 
+
     private fun loadPhotos() = intent {
-        viewModelScope.launch(Dispatchers.IO + ceh) {
+        viewModelScope.launch(ceh) {
             reduce { state.copy(isLoading = true) }
-            val images = fetchPhotos()
-            reduce { state.copy(images = images, isLoading = false, error = null) }
+
+            repo.getPhotos().collect { images ->
+                reduce { state.copy(images = images, isLoading = false, error = null) }
+            }
+        }
+    }
+
+    private fun deletePhoto(image: Image) = intent {
+        viewModelScope.launch(ceh) {
+            val updatedImages = state.images.filter { it.id != image.id }
+            reduce { state.copy(images = updatedImages) }
+            postSideEffect(ImagesListSideEffect.ShowToast("Фото удалено"))
         }
     }
 
@@ -75,13 +89,31 @@ class AppViewModel() : ContainerHost<ImagesListState, ImagesListSideEffect>, Vie
         }
     }
 
-    private suspend fun fetchPhotos(): List<Image> {
-        val images = mutableListOf<Image>()
-        repo.getPhotos().collect { photos ->
-            images.addAll(photos)
+    fun loadPhotosRepeatOnSub() = intent(registerIdling = false) {
+        //гарантирует, что собираем изображения только тогда, когда подписка на UI активна
+        repeatOnSubscription {
+            repo.getPhotos().collect { images ->
+                reduce { state.copy(images = images, isLoading = false, error = null) }
+            }
         }
-        return images
     }
 
+    @OptIn(OrbitExperimental::class)
+    suspend fun filterImages() = subIntent {
+        val filteredImages = state.images.filter { it.photographer.contains("John") }
+        reduce { state.copy(images = filteredImages) }
+    }
+
+    @OptIn(OrbitExperimental::class)
+    suspend fun fetchImages() = subIntent {
+        repo.getPhotos().collect { images ->
+            reduce { state.copy(images = images) }
+        }
+    }
+
+    fun loadAndFilterPhotos() = intent {
+        fetchImages()
+        filterImages()
+    }
 }
 

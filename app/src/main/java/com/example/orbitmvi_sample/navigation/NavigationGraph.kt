@@ -15,13 +15,11 @@ import com.example.orbitmvi_sample.presentation.list.ImagesScreen
 fun NavigationGraph(navController: NavHostController, viewModel: AppViewModel, viewModelDetail: PhotoDetailViewModel) {
     NavHost(navController = navController, startDestination = "images_screen_route") {
 
-        // Главный экран с фотографиями
         composable("images_screen_route") {
 
             ImagesScreen(viewModel = viewModel, navController = navController)
         }
 
-        // Экран с деталями фотографии
         composable(
             route = "photo_detail_screen_route/{photoId}",
             arguments = listOf(navArgument("photoId") { type = NavType.IntType })

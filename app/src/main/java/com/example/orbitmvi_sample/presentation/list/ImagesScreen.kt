@@ -12,13 +12,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,11 +34,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ErrorResult
 import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.example.orbitmvi_sample.domain.model.Image
 import com.example.orbitmvi_sample.presentation.AppViewModel
 import com.example.orbitmvi_sample.presentation.ImagesListSideEffect
 import com.example.orbitmvi_sample.presentation.MainScreenAction
+import kotlinx.coroutines.Dispatchers
+import okhttp3.Dispatcher
 import org.orbitmvi.orbit.compose.collectAsState
 import org.orbitmvi.orbit.compose.collectSideEffect
 import kotlin.random.Random
@@ -62,6 +71,9 @@ fun ImagesScreen(
                     images = state.images,
                     onItemClick = { photo ->
                         viewModel.dispatch(MainScreenAction.SelectPhoto(photo))
+                    },
+                    onDeleteClick = { photo ->
+                        viewModel.dispatch(MainScreenAction.DeletePhoto(photo))
                     }
                 )
             }
@@ -97,7 +109,8 @@ fun ImagesScreen(
 @Composable
 fun ImagesList(
     images: List<Image>,
-    onItemClick: (Image) -> Unit
+    onItemClick: (Image) -> Unit,
+    onDeleteClick: (Image) -> Unit,
 ) {
     LazyVerticalStaggeredGrid(
         modifier = Modifier
@@ -108,10 +121,16 @@ fun ImagesList(
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
         verticalItemSpacing = 8.dp
     ) {
-        items(images) { image ->
+        items(
+            count = images.size,
+            key = { it ->
+                images[it].id
+            }
+        ) { image ->
             ImageItem(
-                image = image,
+                image = images[image],
                 onClick = onItemClick,
+                onDeleteClick = onDeleteClick,
             )
         }
     }
@@ -122,34 +141,42 @@ fun ImageItem(
     modifier: Modifier = Modifier,
     image: Image,
     onClick: (Image) -> Unit,
+    onDeleteClick: (Image) -> Unit // Добавляем обработчик удаления
 ) {
-    val randomHeight = Random.nextInt(150, 300).dp
-
     Card(
-        modifier = modifier.clickable { onClick.invoke(image) },
+        modifier = modifier
+            .clickable { onClick.invoke(image) }
+            .padding(4.dp),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(4.dp),
     ) {
+        val context = LocalContext.current
+        val listener = object : ImageRequest.Listener {
+            override fun onError(request: ImageRequest, result: ErrorResult) {
+                super.onError(request, result)
+            }
+
+            override fun onSuccess(request: ImageRequest, result: SuccessResult) {
+                super.onSuccess(request, result)
+            }
+        }
+        val imageRequest = ImageRequest.Builder(context)
+            .data(image.url)
+            .listener(listener)
+            .dispatcher(Dispatchers.IO)
+            .memoryCacheKey(image.url)
+            .diskCacheKey(image.url)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .build()
+
         Column {
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(image.url)
-                    .crossfade(true)
-                    .listener(
-                        onStart = {  },
-                        onSuccess = { _, _ ->  },
-                        onError = { _, throwable ->
-                            Log.e(
-                                "ImageLoad",
-                                "Error loading image: ${throwable.throwable.message}"
-                            )
-                        }
-                    )
-                    .build(),
+                model = imageRequest,
                 contentDescription = image.photographer,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(randomHeight)
+                    .height(200.dp)
                     .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
                 contentScale = ContentScale.Crop
             )
@@ -167,10 +194,21 @@ fun ImageItem(
                     fontSize = 16.sp,
                     color = Color.White
                 )
+                IconButton(
+                    onClick = { onDeleteClick(image) },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Удалить",
+                        tint = Color.White
+                    )
+                }
             }
         }
     }
 }
+
 
 
 
